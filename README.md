@@ -1,3 +1,4 @@
+[![CI](https://github.com/vdz9/lab04/actions/workflows/ci.yml/badge.svg)](https://github.com/vdz9/lab04/actions/workflows/ci.yml)
 ### Tasks: Изучение систем автоматизации сборки проекта на примере **CMake**
 
 1. Создать публичный репозиторий с названием **lab03** на сервисе **GitHub**
