@@ -44,7 +44,7 @@ git config --global user.email ${GITHUB_EMAIL}
 git config -e --global
 ```
 
-Результат: Инициаkbлизация пустой Git-репозитория
+Результат: Иницилизирован пустой Git-репозиторий
 
 ### 4. Cинхронизация
 
@@ -55,7 +55,7 @@ touch README.md
 git status
 git add README.md
 git commit -m "added README.md"
-git push -u origin main
+git push -u origin master
 ```
 
 Результат: Создание и отправка на GitHub первого коммита с пустым файлом README.md
@@ -64,7 +64,7 @@ git push -u origin main
 
 ```shell
 #Через веб-интерфейс был добавлен файл .gitignore
-git pull origin main
+git pull origin master
 git log
 ```
 
@@ -135,7 +135,7 @@ edit README.md
 git status
 git add .
 git commit -m "added sources"
-git push origin main
+git push origin master
 ```
 
 Результат: Отправка второго коммита содержащий три новые директории
