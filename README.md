@@ -1,5 +1,5 @@
 [![CI](https://github.com/vdz9/lab04/actions/workflows/ci.yml/badge.svg)](https://github.com/vdz9/lab04/actions/workflows/ci.yml)
-### Tasks: Изучение систем автоматизации сборки проекта на примере **CMake**
+### Tasks: Настройка автоматической сборки проекта через Github Actions
 
 1. Создать публичный репозиторий с названием **lab04** на сервисе **GitHub**
 2. Ознакомиться со ссылками учебного материала
