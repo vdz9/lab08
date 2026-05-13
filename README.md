@@ -1,9 +1,8 @@
-### Tasks: Изучение систем контроля версий на примере **Git**.
+### Tasks: Bзучение систем автоматизации сборки проекта на примере **CMake**
 
-1. Создать публичный репозиторий с названием **lab02** и с лиценцией **MIT**
-2. Сгенирировать токен для доступа к сервису **GitHub** с правами **repo**
-3. Ознакомиться со ссылками учебного материала
-4. Выполнить инструкцию учебного материала
+1. Создать публичный репозиторий с названием **lab03** на сервисе **GitHub**
+2. Ознакомиться со ссылками учебного материала
+3. Выполнить инструкцию учебного материала
 
 ### 1. Настройка переменных окружения
 
@@ -11,131 +10,141 @@
 export GITHUB_USERNAME=vdz9
 export GITHUB_EMAIL=<адрес_почтового_ящика>
 export GITHUB_TOKEN=<сохраненный_токен>
-alias edit=nano
-```
-
-### 2. Настройка переменных окружения
-
-```
-mkdir -p ~/.config
-cat > ~/.config/hub <<EOF
-github.com:
-- user: ${GITHUB_USERNAME}
-  oauth_token: ${GITHUB_TOKEN}
-  protocol: https
-EOF
-git config --global hub.protocol https
-```
-
-Результат: hub настроен для взаимодействия с GitHub
-
-### 3. Инициализация и настройка локального репозитория
-
-```
-cd ${GITHUB_USERNAME}/workspace
+export CMAKE_CURRENT_SOURCED_DIR=<директория_с_файлом_CMake>
 source scripts/activate
 
-mkdir -p projects/lab02 && cd projects/lab02
-git init
+cd ${GITHUB_USERNAME}/workspace
+pushd .
+source scripts/activate
 
-git config --global user.name ${GITHUB_USERNAME}
-git config --global user.email ${GITHUB_EMAIL}
-
-git config -e --global
+git clone https://github.com/${GITHUB_USERNAME}/lab02.git projects/lab03
+cd projects/lab03
+git remote remove origin
+git remote add origin https://github.com/${GITHUB_USERNAME}/lab03.git
 ```
 
-Результат: Иницилизирован пустой Git-репозиторий
-
-### 4. Cинхронизация
-
-```
-git remote add origin https://github.com/vzd9/lab02.git
-
-touch README.md
-git status
-git add README.md
-git commit -m "added README.md"
-git push -u origin master
-```
-
-Результат: Создание и отправка на GitHub первого коммита с пустым файлом README.md
-
-### 5. Работа с .gitignore
-
-```shell
-#Через веб-интерфейс был добавлен файл .gitignore
-git pull origin master
-git log
-```
-
-Результат: Появление в истории коммитов записи о добавлении .gitignore
-
-### 6. Создание структуры проекта и исходных файлов
+Результат: Копирование репозитория из предыдущей лабораторной работы в текущую и последующая его привязка к новому репозиторию
+### 2. Ручная компиляция
 
 ```
-mkdir sources include examples
+g++ -std=c++11 -I./include -c sources/print.cpp
+ls print.o
+nm print.o | grep print
+ar rvs print.a print.o
+file print.a
+g++ -std=c++11 -I./include -c examples/example1.cpp
+ls example1.o
+g++ example1.o print.a -o example1
+./example1 && echo
 ```
-```bash
-cat > sources/print.cpp <<EOF
-#include <print.hpp>
-
-void print(const std::string& text, std::ostream& out)
-{
-  out << text;
-}
-
-void print(const std::string& text, std::ofstream& out)
-{
-  out << text;
-}
-EOF
 ```
-```bash
-cat > include/print.hpp <<EOF
-#include <fstream>
-#include <iostream>
-#include <string>
-
-void print(const std::string& text, std::ofstream& out);
-void print(const std::string& text, std::ostream& out = std::cout);
-EOF
+g++ -std=c++11 -I./include -c examples/example2.cpp
+nm example2.o
+g++ example2.o print.a -o example2
+./example2
+cat log.txt && echo
 ```
-```bash
-cat > examples/example1.cpp <<EOF
-#include <print.hpp>
-
-int main(int argc, char** argv)
-{
-  print("hello");
-}
-EOF
 ```
-```bash
-cat > examples/example2.cpp <<EOF
-#include <print.hpp>
+rm -rf example1.o example2.o print.o
+rm -rf print.a
+rm -rf example1 example2
+rm -rf log.txt
+```
 
-#include <fstream>
+Результат: Компиляция файлов из предыдущей лабораторной работы, создание объектного файла print.o и статической библиотеки print.a, запуск приложений example1 и example2, программа example2 создала файл log.txt с выводом "hello", удаление всех временных файлов компиляции
 
-int main(int argc, char** argv)
-{
-  std::ofstream file("log.txt");
-  print(std::string("hello"), file);
-}
+### 3. Создание CMakeLists.txt для статической библиотеки
+
+```
+cat > CMakeLists.txt <<EOF
+cmake_minimum_required(VERSION 3.4)
+project(print)
 EOF
 ```
 ```
-edit README.md
+cat >> CMakeLists.txt <<EOF
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+EOF
+```
+```
+cat >> CMakeLists.txt <<EOF
+add_library(print STATIC ${CMAKE_CURRENT_SOURCE_DIR}/sources/print.cpp)
+EOF
+
+```
+```
+cat >> CMakeLists.txt <<EOF
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+EOF
+```
+```
+cmake -H. -B_build
+cmake --build _build
+```
+Результат: Создан файл CMakeLists.txt
+
+### 4. Добавление целей для исполняемых файлов
+
+```
+cat >> CMakeLists.txt <<EOF
+add_executable(example1 ${CMAKE_CURRENT_SOURCE_DIR}/examples/example1.cpp)
+add_executable(example2 ${CMAKE_CURRENT_SOURCE_DIR}/examples/example2.cpp)
+EOF
+```
+```
+cat >> CMakeLists.txt <<EOF
+target_link_libraries(example1 print)
+target_link_libraries(example2 print)
+EOF
+```
+```
+cmake --build _build
+cmake --build _build --target print
+cmake --build _build --target example1
+cmake --build _build --target example2
 ```
 
-Результат: Создание структуры проекта. Файл README.md отредактирован
+Результат: В CMakeLists.txt добавлены цели example1 и example2 с привязкой к библиотеке print, сборка всех файлов выполнена успешно
 
-### 7. Фиксация и отправка структуры проекта
+### 5. Тестирование собранных приложений
 
 ```
-git status
-git add .
-git commit -m "added sources"
-git push origin master
+ls -la _build/libprint.a
+_build/example1 && echo
+_build/example2
+cat log.txt && echo
+rm -rf log.txt
 ```
 
-Результат: Отправка второго коммита содержащий три новые директории
+Результат: Статическая библиотека libprint.a создана в _build, приложение example1 вывело "hello", example2 создало log.txt с "hello", после проверки log.txt удален
+
+### 6. Установка CMakeLists.txt
+
+```
+git clone https://github.com/tp-labs/lab03 tmp
+mv -f tmp/CMakeLists.txt .
+rm -rf tmp
+
+cat CMakeLists.txt
+cmake -H. -B_build -DCMAKE_INSTALL_PREFIX=_install
+cmake --build _build --target install
+tree _install
+```
+
+Результат: CMakeLists.txt загружен и заменен. Выполнена установка проекта в _install
+
+### 7. Итоговая структура
+
+```
+_install
+├── cmake
+│   ├── print-config.cmake
+│   └── print-config-noconfig.cmake
+├── include
+│   └── print.hpp
+└── lib
+    └── libprint.a
+
+4 directories, 4 files
+```
