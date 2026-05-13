@@ -71,7 +71,6 @@ EOF
 cat >> CMakeLists.txt <<EOF
 add_library(print STATIC ${CMAKE_CURRENT_SOURCE_DIR}/sources/print.cpp)
 EOF
-
 ```
 ```
 cat >> CMakeLists.txt <<EOF
