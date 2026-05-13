@@ -1,0 +1,63 @@
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+
+  build-packages:
+    name: Build Packages
+    needs: release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            generator: DEB;RPM;TGZ
+          - os: macos-latest
+            generator: DragNDrop;TGZ
+          - os: windows-latest
+            generator: WIX;NSIS;ZIP
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies (Linux RPM)
+        if: runner.os == 'Linux'
+        run: sudo apt-get install -y rpm
+
+      - name: Configure
+        run: cmake -H. -B_build -DCPACK_GENERATOR="${{ matrix.generator }}"
+
+      - name: Build
+        run: cmake --build _build
+
+      - name: Package
+        run: cmake --build _build --target package
+
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v1
+        with:
+          files: _build/*.tar.gz;_build/*.deb;_build/*.rpm;_build/*.dmg;_build/*.msi;_build/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,7 +1,7 @@
-[![CI](https://github.com/vdz9/lab05/actions/workflows/ci.yml/badge.svg)](https://github.com/vdz9/lab05/actions/workflows/ci.yml)
-### Tasks: Изучение фреймворков для тестирования на примере GTest
+[![CI](https://github.com/vdz9/lab06/actions/workflows/ci.yml/badge.svg)](https://github.com/vdz9/lab06/actions/workflows/ci.yml)
+### Tasks: Изучение средств пакетирования на примере CPack
 
-1. Создать публичный репозиторий с названием **lab05** на сервисе **GitHub**
+1. Создать публичный репозиторий с названием **lab06** на сервисе **GitHub**
 2. Ознакомиться со ссылками учебного материала
 3. Выполнить инструкцию учебного материала
 
@@ -16,127 +16,134 @@ cd ${GITHUB_USERNAME}/workspace
 pushd .
 source scripts/activate
 
-git clone https://github.com/${GITHUB_USERNAME}/lab04.git projects/lab05
-cd projects/lab05
+git clone https://github.com/${GITHUB_USERNAME}/lab05.git projects/lab06
+cd projects/lab06
 git remote remove origin
-git remote add origin https://github.com/${GITHUB_USERNAME}/lab05.git
+git remote add origin https://github.com/${GITHUB_USERNAME}/lab06.git
 ```
 
 Результат: Копирование репозитория из предыдущей лабораторной работы в текущую и последующая его привязка к новому репозиторию
-### 2. Добавление фреймворка GTest
+### 2. Настройка версионирования в CMakeLists.txt
 
 ```
-mkdir -p third-party
-git submodule add https://github.com/google/googletest third-party/gtest
-cd third-party/gtest && git checkout release-1.12.1 && cd ../..
-git add third-party/gtest
-git commit -m "added gtest framework"
+gsed -i '/project(print)/a\
+set(PRINT_VERSION_MAJOR 0)
+' CMakeLists.txt
+gsed -i '/project(print)/a\
+set(PRINT_VERSION_MINOR 1)
+' CMakeLists.txt
+gsed -i '/project(print)/a\
+set(PRINT_VERSION_PATCH 0)
+' CMakeLists.txt
+gsed -i '/project(print)/a\
+set(PRINT_VERSION_TWEAK 0)
+' CMakeLists.txt
+gsed -i '/project(print)/a\
+set(PRINT_VERSION\
+  \${PRINT_VERSION_MAJOR}.\${PRINT_VERSION_MINOR}.\${PRINT_VERSION_PATCH}.\${PRINT_VERSION_TWEAK})
+' CMakeLists.txt
+gsed -i '/project(print)/a\
+set(PRINT_VERSION_STRING "v\${PRINT_VERSION}")
+' CMakeLists.txt
+git diff
 ```
 
-Результат: Добавление Google Test как подмодуля в директорию third-party/gtest
+Результат: Добавление переменных  версий в CMakeLists.txt: MAJOR=0, MINOR=1, PATCH=0, TWEAK=0. Итоговая версия - 0.1.0.0
 
-### 3. Настройка CMakeLists.txt для поддержки тестов
+### 3. Создание DESCRIPTION
 
 ```
-sed -i '/option(BUILD_EXAMPLES "Build examples" OFF)/a\option(BUILD_TESTS "Build tests" OFF)' CMakeLists.txt
+cat > DESCRIPTION <<EOF
+Static C++ library for printing text to console and files.
+Provides print() function with ostream and ofstream support.
+EOF
+```
+Результат: Создание файла DESCRIPTION 
+
+### 4. Создание ChangeLog.md
+
+```
+touch ChangeLog.md
+export DATE="`LANG=en_US date +'%a %b %d %Y'`"
+cat > ChangeLog.md <<EOF
+* ${DATE} ${GITHUB_USERNAME} <${GITHUB_EMAIL}> 0.1.0.0
+- Initial RPM release
+EOF
+```
+
+Результат: Создание файла ChangeLog.md
+
+### 5. Создание CPack
+```
+cat > CPackConfig.cmake <<EOF
+include(InstallRequiredSystemLibraries)
+EOF
+```
+```
+cat >> CPackConfig.cmake <<EOF
+set(CPACK_PACKAGE_CONTACT ${GITHUB_EMAIL})
+set(CPACK_PACKAGE_VERSION_MAJOR \${PRINT_VERSION_MAJOR})
+set(CPACK_PACKAGE_VERSION_MINOR \${PRINT_VERSION_MINOR})
+set(CPACK_PACKAGE_VERSION_PATCH \${PRINT_VERSION_PATCH})
+set(CPACK_PACKAGE_VERSION_TWEAK \${PRINT_VERSION_TWEAK})
+set(CPACK_PACKAGE_VERSION \${PRINT_VERSION})
+set(CPACK_PACKAGE_DESCRIPTION_FILE \${CMAKE_CURRENT_SOURCE_DIR}/DESCRIPTION)
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "static C++ library for printing")
+EOF
+```
+```
+cat >> CPackConfig.cmake <<EOF
+set(CPACK_RESOURCE_FILE_LICENSE \${CMAKE_CURRENT_SOURCE_DIR}/LICENSE)
+set(CPACK_RESOURCE_FILE_README \${CMAKE_CURRENT_SOURCE_DIR}/README.md)
+EOF
+```
+```
+cat >> CPackConfig.cmake <<EOF
+set(CPACK_RPM_PACKAGE_NAME "print-devel")
+set(CPACK_RPM_PACKAGE_LICENSE "MIT")
+set(CPACK_RPM_PACKAGE_GROUP "print")
+set(CPACK_RPM_CHANGELOG_FILE \${CMAKE_CURRENT_SOURCE_DIR}/ChangeLog.md)
+set(CPACK_RPM_PACKAGE_RELEASE 1)
+EOF
+```
+```
+cat >> CPackConfig.cmake <<EOF
+set(CPACK_DEBIAN_PACKAGE_NAME "libprint-dev")
+set(CPACK_DEBIAN_PACKAGE_PREDEPENDS "cmake >= 3.0")
+set(CPACK_DEBIAN_PACKAGE_RELEASE 1)
+EOF
+```
+```
+cat >> CPackConfig.cmake <<EOF
+include(CPack)
+EOF
 ```
 ```
 cat >> CMakeLists.txt <<EOF
-if(BUILD_TESTS)
-  enable_testing()
-  add_subdirectory(third-party/gtest)
-  file(GLOB \${PROJECT_NAME}_TEST_SOURCES tests/*.cpp)
-  add_executable(check \${\${PROJECT_NAME}_TEST_SOURCES})
-  target_link_libraries(check \${PROJECT_NAME} gtest_main)
-  add_test(NAME check COMMAND check)
-endif()
-EOF
-```
-Результат: Добавление в CMakeLists.txt опции BUILD_TESTS и блока сборки тестов с использованием GTest
-
-### 4. Создание модульного теста
-
-```bash
-mkdir tests
-cat > tests/test1.cpp <<EOF
-#include <print.hpp>
-#include <gtest/gtest.h>
-
-TEST(Print, InFileStream)
-{
-  std::string filepath = "file.txt";
-  std::string text = "hello";
-  std::ofstream out{filepath};
-  print(text, out);
-  out.close();
-  std::string result;
-  std::ifstream in{filepath};
-  in >> result;
-  EXPECT_EQ(result, text);
-}
+include(CPackConfig.cmake)
 EOF
 ```
 
-Результат: Создание файла test1.cpp с тестом для функции print
+Результат: Создание конфигурации CPack, файла CPackConfig.cmake с настройками для генерации DEB и RPM пакетов
 
-### 5. Запуск тестов
+### 6. Локальная сборка пакета TGZ и cохранение артефактов
 ```
-cmake -H. -B_build -DBUILD_TESTS=ON
-cmake --build _build
-cmake --build _build --target check
-cmake --build _build --target test
-cmake --build _build --target test -- ARGS=--verbose
+cmake -H. -B_build -DCPACK_GENERATOR="TGZ"
+cmake --build _build --target package
 ```
-
-Результат: Успешный запуск тестов
-
-### 6. Обновление CI конфигурации GitHub Actions
-
 ```
-cat > .github/workflows/ci.yml <<'EOF'
----
-name: CI
-
-on:
-  push:
-    branches: [main, master]
-  pull_request:
-    branches: [main, master]
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    env:
-      CC: gcc
-      CXX: g++
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: Install CMake
-        run: sudo apt-get install -y cmake cmake-data
-
-      - name: Configure
-        run: cmake -H. -B_build -DCMAKE_INSTALL_PREFIX=_install -DBUILD_TESTS=ON
-
-      - name: Build
-        run: cmake --build _build
-
-      - name: Install
-        run: cmake --build _build --target install
-
-      - name: Test
-        run: cmake --build _build --target test -- ARGS=--verbose
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: install-dir
-          path: _install
-EOF
+mkdir -p artifacts
+mv _build/*.tar.gz artifacts
+tree artifacts
 ```
 
-Результат: Добавление флага BUILD_TESTS=ON и шага запуска тестов с подробным выводом в файл ci.yml
+Результат: Конфигурация проекта с генератором TGZ. Архив перемещен в директорию artifacts.
 
+### 7. Итоговая структура
 
+```
+artifacts/
+└── print-0.1.0.0-Linux.tar.gz
+
+1 directory, 1 file
+```

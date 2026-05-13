@@ -1,0 +1,2 @@
+Static C++ library for printing text to console and files.
+Provides print() function with ostream and ofstream support.
