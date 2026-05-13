@@ -1,10 +1,11 @@
+---
 name: CI
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, master]
   pull_request:
-    branches: [ main, master ]
+    branches: [main, master]
 
 jobs:
   build:
@@ -13,22 +14,27 @@ jobs:
       CC: gcc
       CXX: g++
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Install CMake
-      run: sudo apt-get install -y cmake cmake-data
-    
-    - name: Configure
-      run: cmake -H. -B_build -DCMAKE_INSTALL_PREFIX=_install
-    
-    - name: Build
-      run: cmake --build _build
-    
-    - name: Install
-      run: cmake --build _build --target install
-    
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: install-dir
-        path: _install
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install CMake
+        run: sudo apt-get install -y cmake cmake-data
+
+      - name: Configure
+        run: cmake -H. -B_build -DCMAKE_INSTALL_PREFIX=_install -DBUILD_TESTS=ON
+
+      - name: Build
+        run: cmake --build _build
+
+      - name: Install
+        run: cmake --build _build --target install
+
+      - name: Test
+        run: cmake --build _build --target test -- ARGS=--verbose
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: install-dir
+          path: _install
