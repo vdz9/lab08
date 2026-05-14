@@ -25,45 +25,45 @@ git remote add origin https://github.com/${GITHUB_USERNAME}/lab08.git
 Результат: Копирование репозитория из предыдущей лабораторной работы в текущую и последующая его привязка к новому репозиторию
 ### 2. Создание Dockerfile
 
-```
+```bash
 cat > Dockerfile <<'EOF'
 FROM ubuntu:20.04
 EOF
 ```
-```
+```bash
 cat >> Dockerfile <<'EOF'
 RUN apt update && apt install -y gcc g++ cmake
 EOF
 ```
-```
+```bash
 cat >> Dockerfile <<'EOF'
 COPY . print/
 WORKDIR print
 EOF
 ```
-```
+```bash
 cat >> Dockerfile <<'EOF'
 RUN cmake -H. -B_build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=_install
 RUN cmake --build _build
 RUN cmake --build _build --target install
 EOF
 ```
-```
+```bash
 cat >> Dockerfile <<'EOF'
 ENV LOG_PATH /home/logs/log.txt
 EOF
 ```
-```
+```bash
 cat >> Dockerfile <<'EOF'
 VOLUME /home/logs
 EOF
 ```
-```
+```bash
 cat >> Dockerfile <<'EOF'
 WORKDIR _install/bin
 EOF
 ```
-```
+```bash
 cat >> Dockerfile <<'EOF'
 ENTRYPOINT ["./demo"]
 EOF
@@ -73,14 +73,14 @@ EOF
 
 ### 3. Сборка Docker-образа
 
-```
+```bash
 sudo docker build -t logger .
 ```
 Результат: Успешная сборка Docker-образа с именем logger
 
 ### 4. Проверка списка образов
 
-```
+```bash
 sudo docker images
 ```
 Результат: 
@@ -92,7 +92,7 @@ ubuntu:20.04    8feb4d8ca535        111MB         29.3MB
 
 ### 5. Запуск контейнера с томом для логов
 
-```
+```bash
 mkdir -p logs
 sudo docker run -it -v "$(pwd)/logs/:/home/logs/" logger
 ```
@@ -105,11 +105,11 @@ text2
 text3
 ```
 ### 6. Проверка информации об образе
-```
+```bash
 sudo docker inspect logger
 ```
 Результат:
-```
+```bash
 [
     {
         "Architecture": "amd64",
@@ -154,7 +154,7 @@ sudo docker inspect logger
 ```
 ### 7. Проверка сохраненных логов
 
-```
+```bash
 cat logs/log.txt
 ```
 Результат: 
