@@ -52,3 +52,8 @@ if(BUILD_TESTS)
 endif()
 
 include(CPackConfig.cmake)
+
+install(TARGETS solver RUNTIME DESTINATION bin)
+
+add_subdirectory(solver_application)
+install(TARGETS solver RUNTIME DESTINATION bin)
