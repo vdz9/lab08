@@ -1,13 +1,9 @@
 [![CI](https://github.com/vdz9/lab06/actions/workflows/ci.yml/badge.svg)](https://github.com/vdz9/lab06/actions/workflows/ci.yml)
-### Tasks: Изучение систем управления пакетами на примере Hunter
+### Tasks: Изучение систем автоматизации развёртывания и управления приложениями на примере Docker
 
-1. Создать публичный репозиторий с названием **lab06** на сервисе **GitHub**
+1. Создать публичный репозиторий с названием **lab07** на сервисе **GitHub**
 2. Ознакомиться со ссылками учебного материала
 3. Выполнить инструкцию учебного материала
-
-```
-В лабораторной работе используется пакетный менеджер Hunter для загрузки GTest, из-за проблем с совместимостью в данной работе Hunter заменен на прямую интеграцию GTest через git submodule
-```
 
 ### 1. Настройка переменных окружения
 
@@ -20,146 +16,152 @@ cd ${GITHUB_USERNAME}/workspace
 pushd .
 source scripts/activate
 
-git clone https://github.com/${GITHUB_USERNAME}/lab06.git projects/lab07
-cd projects/lab07
+git clone https://github.com/${GITHUB_USERNAME}/lab07.git projects/lab08
+cd projects/lab08
 git remote remove origin
-git remote add origin https://github.com/${GITHUB_USERNAME}/lab07.git
+git remote add origin https://github.com/${GITHUB_USERNAME}/lab08.git
 ```
 
 Результат: Копирование репозитория из предыдущей лабораторной работы в текущую и последующая его привязка к новому репозиторию
-### 2. Добавление GTest как подмодуля
+### 2. Создание Dockerfile
 
 ```
-mkdir -p third-party
-git submodule add https://github.com/google/googletest third-party/gtest
-cd third-party/gtest
-git fetch --tags
-git checkout tags/v1.12.1 -b release-1.12.1
-cd ../..
-git add third-party/gtest .gitmodules
-git commit -m "added gtest v1.12.1 as submodule"
-```
-
-### 3. Настройка CMakeLists.txt для поддержки тестов
-
-```
-sed -i '/option(BUILD_EXAMPLES "Build examples" OFF)/a\option(BUILD_TESTS "Build tests" OFF)' CMakeLists.txt
-```
-```
-cat >> CMakeLists.txt <<'EOF'
-if(BUILD_TESTS)
-  enable_testing()
-  add_subdirectory(third-party/gtest)
-  file(GLOB ${PROJECT_NAME}_TEST_SOURCES tests/*.cpp)
-  add_executable(check ${${PROJECT_NAME}_TEST_SOURCES})
-  target_link_libraries(check ${PROJECT_NAME} gtest_main)
-  add_test(NAME check COMMAND check)
-endif()
-EOF
-```
-Результат: Добавление опция BUILDTESTS и блок сборки тестов с прямым подключением GTest через add_subdirectory
-
-### 4. Создание модульного теста
-
-```
-mkdir tests
-cat > tests/test1.cpp <<EOF
-#include <print.hpp>
-#include <gtest/gtest.h>
-
-TEST(Print, InFileStream)
-{
-  std::string filepath = "file.txt";
-  std::string text = "hello";
-  std::ofstream out{filepath};
-  print(text, out);
-  out.close();
-  std::string result;
-  std::ifstream in{filepath};
-  in >> result;
-  EXPECT_EQ(result, text);
-}
-EOF
-```
-
-Результат: Создание файла test1.cpp с тестом для функции print
-
-### 5. Сборка и запуск тестов
-
-```
-cmake -H. -B_build -DBUILD_TESTS=ON
-cmake --build _build
-cmake --build _build --target check
-cmake --build _build --target test
-cmake --build _build --target test -- ARGS=--verbose
-```
-
-Результат: Проект сконфигурирован с включенными тестами, cборка выполнена успешно
-
-### 6. Результат теста
-```
-Start 1: check
-
-1: Test command: /home/vdz/vdz9/workspace/projects/lab07/_build/check
-1: Working Directory: /home/vdz/vdz9/workspace/projects/lab07/_build
-1: Test timeout computed to be: 10000000
-1: Running main() from /home/vdz/vdz9/workspace/projects/lab07/third-party/gtest/googletest/src/gtest_main.cc
-1: [==========] Running 1 test from 1 test suite.
-1: [----------] Global test environment set-up.
-1: [----------] 1 test from Print
-1: [ RUN      ] Print.InFileStream
-1: [       OK ] Print.InFileStream (0 ms)
-1: [----------] 1 test from Print (0 ms total)
-1: 
-1: [----------] Global test environment tear-down
-1: [==========] 1 test from 1 test suite ran. (0 ms total)
-1: [  PASSED  ] 1 test.
-1/1 Test #1: check ............................   Passed    0.01 sec
-```
-
-### 7. Cоздание демонстрационного приложения
-
-```
-mkdir demo
-cat > demo/main.cpp <<EOF
-#include <print.hpp>
-
-#include <cstdlib>
-
-int main(int argc, char* argv[])
-{
-  const char* log_path = std::getenv("LOG_PATH");
-  if (log_path == nullptr)
-  {
-    std::cerr << "undefined environment variable: LOG_PATH" << std::endl;
-    return 1;
-  }
-  std::string text;
-  while (std::cin >> text)
-  {
-    std::ofstream out{log_path, std::ios_base::app};
-    print(text, out);
-    out << std::endl;
-  }
-}
+cat > Dockerfile <<'EOF'
+FROM ubuntu:20.04
 EOF
 ```
 ```
-sed -i '/add_executable(example2/a\
-\
-add_executable(demo ${CMAKE_CURRENT_SOURCE_DIR}/demo/main.cpp)\
-target_link_libraries(demo print)\
-install(TARGETS demo RUNTIME DESTINATION bin)' CMakeLists.txt
+cat >> Dockerfile <<'EOF'
+RUN apt update && apt install -y gcc g++ cmake
+EOF
+```
+```
+cat >> Dockerfile <<'EOF'
+COPY . print/
+WORKDIR print
+EOF
+```
+```
+cat >> Dockerfile <<'EOF'
+RUN cmake -H. -B_build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=_install
+RUN cmake --build _build
+RUN cmake --build _build --target install
+EOF
+```
+```
+cat >> Dockerfile <<'EOF'
+ENV LOG_PATH /home/logs/log.txt
+EOF
+```
+```
+cat >> Dockerfile <<'EOF'
+VOLUME /home/logs
+EOF
+```
+```
+cat >> Dockerfile <<'EOF'
+WORKDIR _install/bin
+EOF
+```
+```
+cat >> Dockerfile <<'EOF'
+ENTRYPOINT ["./demo"]
+EOF
 ```
 
-Результат: Создание демонстрационного приложения demo, которое читает текст из стандартного ввода и записывает LOG_PATH
+Результат: Создание Dockerfile с инструкциями для сборки образа на основе Ubuntu 20.04, установки компиляторов, копирования исходного кода, сборки проекта и настройки точки входа на демо-приложение
 
-### 8. Сборка демо-приложения
+### 3. Сборка Docker-образа
 
-```cmake -H. -B_build
-cmake --build _build
-echo "test message" | LOG_PATH=/tmp/test.log _build/demo
-cat /tmp/test.log
+```
+sudo docker build -t logger .
+
+```
+Результат: Успешная сборка Docker-образа с именем logger
+
+### 4. Проверка списка образов
+
+```
+sudo docker images
+```
+Результат: 
+```
+IMAGE           ID             DISK USAGE   CONTENT SIZE   EXTRA
+logger:latest   9a51c735b0de        652MB          182MB        
+ubuntu:20.04    8feb4d8ca535        111MB         29.3MB
 ```
 
-Результат: Демо-приложение собрано и протестировано, текст успешно записан в лог-файл
+### 5. Запуск контейнера с томом для логов
+
+```
+mkdir -p logs
+sudo docker run -it -v "$(pwd)/logs/:/home/logs/" logger
+```
+
+Результат: Запуск контейнера в интерактивном режиме, введенный текст сохранен в файл /home/logs/log.txt внутри контейнера, который смонтирован на локальную директорию logs
+Ввод текста:
+```
+text1
+text2
+text3
+```
+### 6. Проверка информации об образе
+```
+sudo docker inspect logger
+
+```
+Результат:
+```
+[
+    {
+        "Architecture": "amd64",
+        "Config": {
+            "Labels": {
+                "org.opencontainers.image.ref.name": "ubuntu",
+                "org.opencontainers.image.version": "20.04"
+        },
+        "Created": "2026-05-14T22:46:23.009217196+03:00",
+        "Descriptor": {
+            "digest": "sha256:9a51c735b0dee24f0d55633c45caf5adda94a0922c524dd9b20d10f8897f3674",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "size": 1624
+        },
+        "Id": "sha256:9a51c735b0dee24f0d55633c45caf5adda94a0922c524dd9b20d10f8897f3674",
+        "Metadata": {
+            "LastTagTime": "2026-05-14T19:46:23.090314389Z"
+        },
+        "Os": "linux",
+        "Parent": "sha256:2f6564a42107007e524407904ba950d5e92463e802b6a7468b972898ebf307db",
+        "RepoDigests": [
+            "logger@sha256:9a51c735b0dee24f0d55633c45caf5adda94a0922c524dd9b20d10f8897f3674"
+        ],
+        "RepoTags": [
+            "logger:latest"
+        ],
+        "RootFS": {
+            "Layers": [
+                "sha256:470b66ea5123c93b0d5606e4213bf9e47d3d426b640d32472e4ac213186c4bb6",
+                "sha256:16b8634b3731e839ddfc56e54218071256344f0d6d0ad97f43c84812995e6f34",
+                "sha256:026c51be27ef5bd06cff92fc321066965f6ed40f33c8d2247e030454760910f0",
+                "sha256:08b18aeb56a2f19f3c248f86af46680ed9c057f7f33436b42442a60f8b8eda57",
+                "sha256:3125a2c7778d1e6d94180474c3670844a86d8dbe2994964ee24f21e01c74cde6",
+                "sha256:24edf523f5171f0d3544ae19dce718346a79528fea785db85e0bc7a6b9ae4c1c"
+            ],
+            "Type": "layers"
+        },
+        "Size": 182479038
+    }
+]
+#docker inspect немного отредактирован чтобы не раскрыть внутреннюю структуру проекта, хэш образы, ключи API и т.д.
+```
+### 7. Проверка сохраненных логов
+
+```
+cat logs/log.txt
+```
+Результат: 
+```
+text1
+text2
+text3
+```
