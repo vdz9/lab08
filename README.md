@@ -262,7 +262,7 @@ set(CPACK_SOURCE_PACKAGE_FILE_NAME "solver-\${CPACK_PACKAGE_VERSION}-Source")
 EOF
 ```
 
-Результат:Результат: Обновление CPackConfig.cmake для создания пакетов solver в форматах DEB, RPM, TGZ, ZIP
+Результат: Обновление CPackConfig.cmake для создания пакетов solver в форматах DEB, RPM, TGZ, ZIP
 
 
 ### 6. Настройка CI для автоматических релизов
